@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# next.js
+.next/
+next-env.d.ts
+
+# convex generated + local
+convex/_generated/
+.convex/
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+
+# modal / python
+__pycache__/
+*.pyc
+.venv/
+
+# logs / os
+*.log
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
+
+# scratch audio used for local testing
+/tmp-audio/

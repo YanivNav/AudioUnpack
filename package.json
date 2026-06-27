@@ -1,0 +1,28 @@
+{
+  "name": "audio-unpack",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Speech-to-text + summary app (standalone & Wix-embedded). See PLAN.md.",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @audio-unpack/web dev",
+    "dev:convex": "convex dev",
+    "dev:modal": "modal serve modal/transcribe.py",
+    "deploy:modal": "modal deploy modal/transcribe.py",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "dependencies": {
+    "@audio-unpack/core": "workspace:*",
+    "@ai-sdk/anthropic": "^1.2.0",
+    "@ai-sdk/groq": "^1.2.0",
+    "ai": "^4.3.0",
+    "convex": "^1.17.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
