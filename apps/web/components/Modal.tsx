@@ -5,7 +5,7 @@ import { type ReactNode, useEffect, useRef } from "react";
 interface ModalProps {
   open: boolean;
   onClose: () => void;
-  title: string;
+  title: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
 }

@@ -69,3 +69,18 @@ export const applyUpdate = internalMutation({
     await ctx.db.patch(args.jobId, patch);
   },
 });
+
+/** Rename a completed job. */
+export const rename = mutation({
+  args: {
+    jobId: v.id("jobs"),
+    fileName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.jobId);
+    if (!job) throw new Error("job not found");
+    const trimmed = args.fileName.trim();
+    if (!trimmed) throw new Error("file name cannot be empty");
+    await ctx.db.patch(args.jobId, { fileName: trimmed });
+  },
+});

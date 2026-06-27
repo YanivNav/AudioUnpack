@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useQuery, useAction } from "convex/react";
+import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { SUMMARIZE_MODELS, type SummaryModel } from "@audio-unpack/core";
@@ -152,10 +152,13 @@ function TranscriptModal({
 }) {
   const job = useQuery(api.jobs.get, { jobId });
   const generateSummary = useAction(api.actions.generateSummary);
+  const renameJob = useMutation(api.jobs.rename);
   const [summarizing, setSummarizing] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [summaryModel, setSummaryModel] = useState<SummaryModel>("groq");
   const [tab, setTab] = useState<"transcript" | "summary">(initialTab);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
 
   if (job === undefined) {
     return (
@@ -180,7 +183,58 @@ function TranscriptModal({
   const isFailed = job.status === "failed";
 
   return (
-    <Modal open onClose={onClose} title={job.fileName}>
+    <Modal open onClose={onClose} title={
+      editingName ? (
+        <input
+          autoFocus
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.target.value)}
+          onBlur={async () => {
+            setEditingName(false);
+            const trimmed = nameDraft.trim();
+            if (trimmed && trimmed !== job.fileName) {
+              try { await renameJob({ jobId, fileName: trimmed }); } catch {}
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            if (e.key === "Escape") { setEditingName(false); setNameDraft(job.fileName); }
+          }}
+          className="w-full rounded border border-primary-300 bg-white px-2 py-1 text-lg font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-primary-200"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => { setNameDraft(job.fileName); setEditingName(true); }}
+          className="group flex items-center gap-2 text-lg font-semibold text-slate-800 hover:text-primary-600"
+          title="Click to rename"
+        >
+          {job.fileName}
+          <svg className="h-4 w-4 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+          </svg>
+        </button>
+      )
+    }>
+      {/* Status & metadata */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+        {job.durationSeconds != null && (
+            <span>
+              {Math.floor(job.durationSeconds / 60)}:
+              {String(Math.floor(job.durationSeconds % 60)).padStart(2, "0")}
+            </span>
+        )}
+        {job.language && <span>· {job.language}</span>}
+        {isDone && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Done</span>}
+        {isFailed && <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">Failed</span>}
+      </div>
+
+      {/* Error */}
+      {isFailed && job.error && (
+          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+            {job.error}
+          </div>
+      )}
       {/* Tab bar — pinned above the scroll area */}
       <div className="-mx-6 -mt-4 mb-0 flex border-b border-slate-200 px-6 pt-1">
         <button
@@ -214,26 +268,6 @@ function TranscriptModal({
 
       {/* Scrollable content area */}
       <div className="flex-1 overflow-y-auto">
-        {/* Status & metadata */}
-        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-          {job.durationSeconds != null && (
-            <span>
-              {Math.floor(job.durationSeconds / 60)}:
-              {String(Math.floor(job.durationSeconds % 60)).padStart(2, "0")}
-            </span>
-          )}
-          {job.language && <span>· {job.language}</span>}
-          {isDone && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Done</span>}
-          {isFailed && <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">Failed</span>}
-        </div>
-
-        {/* Error */}
-        {isFailed && job.error && (
-          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
-            {job.error}
-          </div>
-        )}
-
         {/* Tab: Transcript */}
         {tab === "transcript" && (
           <>
