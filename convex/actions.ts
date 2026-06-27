@@ -30,11 +30,11 @@ export const startTranscription = internalAction({
 
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
+        // `token` authenticates the call (the Modal endpoint avoids header parsing so it
+        // needs no fastapi at deploy time); the rest matches transcribeTaskPayloadSchema.
         body: JSON.stringify({
+          token,
           jobId: args.jobId,
           fileUrl,
           diarize: job.diarize,
@@ -70,16 +70,40 @@ export const generateSummary = action({
     instructions: v.optional(v.string()),
     model: v.optional(v.union(v.literal("groq"), v.literal("anthropic"))),
   },
-  handler: async (_ctx, _args) => {
-    // TODO(impl):
-    //   1. const job = await ctx.runQuery(api.jobs.get, { jobId: args.jobId });
-    //   2. import { summarizeConversation } from "@audio-unpack/core";
-    //      const summary = await summarizeConversation(
-    //        { text: job.transcript ?? "", segments: job.segments, instructions: args.instructions },
-    //        { GROQ_API_KEY: process.env.GROQ_API_KEY, ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY },
-    //        args.model ?? "anthropic");
-    //   3. await ctx.runMutation(internal.jobs.applyUpdate, { jobId: args.jobId, status: "done" }); // + summary patch
-    //   4. return summary;
-    throw new Error("TODO(impl): generateSummary not implemented");
+  handler: async (ctx, args) => {
+    const job = await ctx.runQuery(api.jobs.get, { jobId: args.jobId });
+    if (!job) throw new Error(`job ${args.jobId} not found`);
+    if (!job.transcript) throw new Error("job has no transcript yet");
+
+    try {
+      const { summarizeConversation } = await import("@audio-unpack/core");
+      const summary = await summarizeConversation(
+        {
+          text: job.transcript,
+          segments: job.segments,
+          instructions: args.instructions,
+        },
+        {
+          GROQ_API_KEY: process.env.GROQ_API_KEY,
+          ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+        },
+        args.model ?? "anthropic",
+      );
+
+      await ctx.runMutation(internal.jobs.applyUpdate, {
+        jobId: args.jobId,
+        status: "done",
+        summary,
+      });
+
+      return summary;
+    } catch (err) {
+      await ctx.runMutation(internal.jobs.applyUpdate, {
+        jobId: args.jobId,
+        status: "failed",
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
   },
 });

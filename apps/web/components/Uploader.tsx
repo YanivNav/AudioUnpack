@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-// import { useMutation } from "convex/react";
-// import { api } from "@convex/_generated/api"; // available after `npx convex dev`
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 
 interface UploaderProps {
   onJobCreated: (jobId: string) => void;
@@ -20,21 +21,32 @@ interface UploaderProps {
 export function Uploader({ onJobCreated }: UploaderProps) {
   const [diarize, setDiarize] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // const generateUploadUrl = useMutation(api.files.generateUploadUrl);
-  // const createJob = useMutation(api.jobs.create);
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const createJob = useMutation(api.jobs.create);
 
-  async function handleFile(_file: File) {
+  async function handleFile(file: File) {
     setBusy(true);
+    setError(null);
     try {
-      // TODO(impl):
-      //   const url = await generateUploadUrl();
-      //   const res = await fetch(url, { method: "POST", headers: { "Content-Type": _file.type }, body: _file });
-      //   const { storageId } = await res.json();
-      //   const jobId = await createJob({ storageId, fileName: _file.name, diarize });
-      //   onJobCreated(jobId);
-      void onJobCreated;
-      throw new Error("TODO(impl): upload flow not implemented");
+      const uploadUrl = await generateUploadUrl();
+      const res = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!res.ok) throw new Error(`upload failed (${res.status})`);
+      const { storageId } = (await res.json()) as { storageId: string };
+
+      const jobId = await createJob({
+        storageId: storageId as Id<"_storage">,
+        fileName: file.name,
+        diarize,
+      });
+      onJobCreated(jobId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
@@ -46,6 +58,7 @@ export function Uploader({ onJobCreated }: UploaderProps) {
         <input
           type="checkbox"
           checked={diarize}
+          disabled={busy}
           onChange={(e) => setDiarize(e.target.checked)}
         />
         Speaker recognition (extra compute — see PLAN.md)
@@ -61,6 +74,7 @@ export function Uploader({ onJobCreated }: UploaderProps) {
         }}
       />
       {busy && <p>Uploading…</p>}
+      {error && <p role="alert">Error: {error}</p>}
     </section>
   );
 }

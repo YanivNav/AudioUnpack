@@ -18,24 +18,60 @@ const SYSTEM_PROMPT =
   "Use speaker labels when present. Be faithful to the transcript; do not invent details.";
 
 /**
- * Generate a conversation summary with the Vercel AI SDK (`generateText`/`streamText`).
+ * Generate a conversation summary with the Vercel AI SDK (`generateText`).
  * Default model is Anthropic (quality); `model: "groq"` is a free alternative.
  * Called from a Convex action (a plain fetch, well under Convex's action limit).
  */
 export async function summarizeConversation(
-  _input: SummaryInput,
-  _env: SummaryEnv,
-  _model: SummaryModel = "anthropic",
+  input: SummaryInput,
+  env: SummaryEnv,
+  model: SummaryModel = "anthropic",
 ): Promise<string> {
-  // TODO(impl): build the prompt from input.text (or speaker-joined segments) and call:
-  //   import { generateText } from "ai";
-  //   import { createAnthropic } from "@ai-sdk/anthropic";
-  //   import { createGroq } from "@ai-sdk/groq";
-  //   const model = _model === "groq"
-  //     ? createGroq({ apiKey: _env.GROQ_API_KEY }).languageModel("llama-3.3-70b-versatile")
-  //     : createAnthropic({ apiKey: _env.ANTHROPIC_API_KEY }).languageModel("claude-...");
-  //   const { text } = await generateText({ model, system: SYSTEM_PROMPT, prompt });
-  //   return text;
-  void SYSTEM_PROMPT;
-  throw new Error("TODO(impl): summarizeConversation not implemented");
+  const { generateText } = await import("ai");
+  const { createAnthropic } = await import("@ai-sdk/anthropic");
+  const { createGroq } = await import("@ai-sdk/groq");
+
+  const prompt = buildPrompt(input);
+
+  const languageModel =
+    model === "groq"
+      ? createGroq({ apiKey: env.GROQ_API_KEY }).languageModel(
+          "llama-3.3-70b-versatile",
+        )
+      : createAnthropic({ apiKey: env.ANTHROPIC_API_KEY }).languageModel(
+          "claude-sonnet-4-6",
+        );
+
+  const { text } = await generateText({
+    model: languageModel,
+    system: SYSTEM_PROMPT,
+    prompt,
+  });
+
+  return text;
+}
+
+/** Build the user prompt from the transcript (optionally speaker-tagged) + instructions. */
+function buildPrompt(input: SummaryInput): string {
+  const transcript = formatTranscript(input);
+  const prompt = `Please summarize the following conversation transcript:\n\n${transcript}`;
+  if (input.instructions) {
+    return `${prompt}\n\nInstructions: ${input.instructions}`;
+  }
+  return prompt;
+}
+
+/**
+ * Format the transcript for the model. When speaker-labelled segments are available,
+ * prefix each segment with the speaker label so the model knows who said what.
+ * Otherwise just return the flat text.
+ */
+function formatTranscript(input: SummaryInput): string {
+  const { segments, text } = input;
+  if (segments && segments.length > 0 && segments[0]?.speaker) {
+    return segments
+      .map((s) => `${s.speaker}: ${s.text}`)
+      .join("\n");
+  }
+  return text;
 }

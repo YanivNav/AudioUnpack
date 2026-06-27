@@ -53,6 +53,7 @@ export const applyUpdate = internalMutation({
     transcript: v.optional(v.string()),
     segments: v.optional(v.array(segmentValidator)),
     durationSeconds: v.optional(v.number()),
+    summary: v.optional(v.string()),
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -61,6 +62,7 @@ export const applyUpdate = internalMutation({
     if (args.transcript !== undefined) patch.transcript = args.transcript;
     if (args.segments !== undefined) patch.segments = args.segments;
     if (args.durationSeconds !== undefined) patch.durationSeconds = args.durationSeconds;
+    if (args.summary !== undefined) patch.summary = args.summary;
     if (args.error !== undefined) patch.error = args.error;
     await ctx.db.patch(args.jobId, patch);
   },
