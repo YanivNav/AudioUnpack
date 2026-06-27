@@ -1,58 +1,66 @@
-:root {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  line-height: 1.5;
-  color: #1a1a2e;
-  background: #fafafa;
-}
+@import "tailwindcss";
 
-* {
-  box-sizing: border-box;
+@theme {
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-300: #a5b4fc;
+  --color-primary-400: #818cf8;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
+  --color-primary-900: #312e81;
+  --color-surface: #ffffff;
+  --color-muted: #f8fafc;
+  --radius-card: 0.75rem;
+  --radius-modal: 1rem;
 }
 
 body {
   margin: 0;
+  background: #f1f5f9;
+  color: #1e293b;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.app {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 2rem 1.25rem;
+/* Markdown-rendered content (summary output from LLMs) */
+.prose h1,
+.prose h2,
+.prose h3 {
+  font-weight: 600;
+  color: #1e293b;
+  margin: 1em 0 0.5em;
 }
-
-header h1 {
-  margin: 0 0 0.25rem;
+.prose h1 { font-size: 1.25rem; }
+.prose h2 { font-size: 1.1rem; }
+.prose h3 { font-size: 1rem; }
+.prose p { margin: 0.5em 0; line-height: 1.65; }
+.prose ul,
+.prose ol { margin: 0.5em 0; padding-left: 1.25rem; }
+.prose li { margin: 0.25em 0; line-height: 1.5; }
+.prose code {
+  background: #f1f5f9;
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  font-size: 0.875em;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
 }
-
-header p {
-  margin: 0 0 1.5rem;
-  color: #555;
+.prose pre {
+  background: #f1f5f9;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.8125rem;
+  line-height: 1.5;
 }
-
-.uploader,
-.job {
-  border: 1px solid #e2e2e8;
-  border-radius: 12px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-  background: #fff;
+.prose strong { font-weight: 600; }
+.prose blockquote {
+  border-left: 3px solid #818cf8;
+  padding-left: 1rem;
+  margin: 0.5em 0;
+  color: #64748b;
 }
-
-.job-progress {
-  width: 100%;
-  height: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
-}
-
-code {
-  background: #f0f0f4;
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-}
+.prose hr { border: none; border-top: 1px solid #e2e8f0; margin: 1em 0; }

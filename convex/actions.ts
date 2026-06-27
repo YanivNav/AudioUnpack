@@ -68,7 +68,7 @@ export const generateSummary = action({
   args: {
     jobId: v.id("jobs"),
     instructions: v.optional(v.string()),
-    model: v.optional(v.union(v.literal("groq"), v.literal("anthropic"))),
+    model: v.optional(v.string()), // validated against SUMMARIZE_MODELS at runtime
   },
   handler: async (ctx, args) => {
     const job = await ctx.runQuery(api.jobs.get, { jobId: args.jobId });
@@ -76,18 +76,18 @@ export const generateSummary = action({
     if (!job.transcript) throw new Error("job has no transcript yet");
 
     try {
-      const { summarizeConversation } = await import("@audio-unpack/core");
+      const { summarizeConversation, SUMMARIZE_MODELS } = await import("@audio-unpack/core");
       const summary = await summarizeConversation(
         {
           text: job.transcript,
           segments: job.segments,
           instructions: args.instructions,
+          language: job.language ?? undefined,
         },
-        {
-          GROQ_API_KEY: process.env.GROQ_API_KEY,
-          ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-        },
-        args.model ?? "anthropic",
+        Object.fromEntries(
+          SUMMARIZE_MODELS.map((m) => [m.envKey, process.env[m.envKey]]),
+        ),
+        (args.model as any) ?? "groq",
       );
 
       await ctx.runMutation(internal.jobs.applyUpdate, {
@@ -98,12 +98,25 @@ export const generateSummary = action({
 
       return summary;
     } catch (err) {
-      await ctx.runMutation(internal.jobs.applyUpdate, {
-        jobId: args.jobId,
-        status: "failed",
-        error: err instanceof Error ? err.message : String(err),
-      });
+      // Don't overwrite the job status — transcription is still done.
+      // Let the error propagate to the client so the user can retry.
       throw err;
     }
+  },
+});
+
+/**
+ * Return which summary AI providers have API keys configured on this deployment.
+ * Called from the frontend to enable/disable model options in the UI.
+ */
+export const getAvailableModels = action({
+  args: {},
+  handler: async () => {
+    const { SUMMARIZE_MODELS } = await import("@audio-unpack/core");
+    const available: Record<string, boolean> = {};
+    for (const m of SUMMARIZE_MODELS) {
+      available[m.id] = Boolean(process.env[m.envKey]);
+    }
+    return available;
   },
 });

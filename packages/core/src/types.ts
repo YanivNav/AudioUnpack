@@ -62,5 +62,3 @@ export type TranscribeTaskPayload = z.infer<typeof transcribeTaskPayloadSchema>;
  */
 export type TranscriptionEngine = "faster-whisper" | "whisperx-pyannote";
 
-/** Which LLM to use for summaries. */
-export type SummaryModel = "groq" | "anthropic";
