@@ -24,6 +24,9 @@ importers:
         specifier: ^1.17.0
         version: 1.42.0(react@19.2.7)
     devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.0
       typescript:
         specifier: ^5.7.0
         version: 5.9.3

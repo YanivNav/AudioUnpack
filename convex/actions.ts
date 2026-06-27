@@ -2,29 +2,61 @@
 
 import { v } from "convex/values";
 import { internalAction, action } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 
 /**
  * Kick off the Modal transcription job for a job row.
  * POSTs to the Modal web endpoint (MODAL_TRANSCRIBE_URL) with a shared bearer token;
  * Modal spawns the GPU job and streams results back via the httpAction callback.
+ * Body matches `transcribeTaskPayloadSchema` from @audio-unpack/core.
  */
 export const startTranscription = internalAction({
   args: { jobId: v.id("jobs") },
-  handler: async (_ctx, _args) => {
-    // TODO(impl):
-    //   1. const job = await ctx.runQuery(api.jobs.get, { jobId: args.jobId });
-    //   2. const fileUrl = await ctx.storage.getUrl(job.storageId); // signed URL
-    //   3. POST to Modal, matching transcribeTaskPayloadSchema from @audio-unpack/core:
-    //      await fetch(process.env.MODAL_TRANSCRIBE_URL!, {
-    //        method: "POST",
-    //        headers: {
-    //          "Content-Type": "application/json",
-    //          Authorization: `Bearer ${process.env.MODAL_AUTH_TOKEN}`,
-    //        },
-    //        body: JSON.stringify({ jobId: args.jobId, fileUrl, diarize: job.diarize, language: job.language }),
-    //      });
-    //   4. await ctx.runMutation(internal.jobs.applyUpdate, { jobId: args.jobId, status: "queued" });
-    throw new Error("TODO(impl): startTranscription not implemented");
+  handler: async (ctx, args) => {
+    const job = await ctx.runQuery(api.jobs.get, { jobId: args.jobId });
+    if (!job) throw new Error(`job ${args.jobId} not found`);
+
+    try {
+      const endpoint = process.env.MODAL_TRANSCRIBE_URL;
+      const token = process.env.MODAL_AUTH_TOKEN;
+      if (!endpoint || !token) {
+        throw new Error(
+          "MODAL_TRANSCRIBE_URL / MODAL_AUTH_TOKEN are not set on the Convex deployment",
+        );
+      }
+      if (!job.storageId) throw new Error("job has no storageId (file not uploaded)");
+      const fileUrl = await ctx.storage.getUrl(job.storageId);
+      if (!fileUrl) throw new Error("could not get a signed URL for the source audio");
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          jobId: args.jobId,
+          fileUrl,
+          diarize: job.diarize,
+          language: job.language,
+        }),
+      });
+      if (!res.ok) {
+        throw new Error(`Modal endpoint returned ${res.status}: ${await res.text()}`);
+      }
+
+      await ctx.runMutation(internal.jobs.applyUpdate, {
+        jobId: args.jobId,
+        status: "queued",
+      });
+    } catch (err) {
+      await ctx.runMutation(internal.jobs.applyUpdate, {
+        jobId: args.jobId,
+        status: "failed",
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
   },
 });
 

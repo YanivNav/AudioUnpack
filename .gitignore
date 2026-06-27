@@ -36,3 +36,8 @@ Thumbs.db
 
 # scratch audio used for local testing
 /tmp-audio/
+
+# agents
+.claude/skills/
+.agents/skills/
+.claude/settings.local.json

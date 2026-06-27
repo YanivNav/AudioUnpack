@@ -1,5 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
+import { jobStatusValidator, segmentValidator } from "./schema";
 
 /** Create a job after the file has been uploaded to Convex storage. */
 export const create = mutation({
@@ -17,8 +20,8 @@ export const create = mutation({
       diarize: args.diarize,
       language: args.language,
     });
-    // TODO(impl): schedule the Modal kickoff action, e.g.
-    //   await ctx.scheduler.runAfter(0, internal.actions.startTranscription, { jobId });
+    // Kick off the Modal transcription job (runs in a Node action, so scheduled here).
+    await ctx.scheduler.runAfter(0, internal.actions.startTranscription, { jobId });
     return jobId;
   },
 });
@@ -37,30 +40,28 @@ export const list = query({
 
 /**
  * Internal: apply a status/transcript update coming from the Modal callback.
- * Called by the httpAction in `http.ts`.
+ * Called by the httpAction in `http.ts` (and the kickoff action for "queued").
+ *
+ * Only fields that are actually present are patched — we never write `undefined`, which
+ * would otherwise clear an already-set field on a later progress-only update.
  */
 export const applyUpdate = internalMutation({
   args: {
     jobId: v.id("jobs"),
-    status: v.string(),
+    status: jobStatusValidator,
     progress: v.optional(v.number()), // 0–100
     transcript: v.optional(v.string()),
-    segments: v.optional(
-      v.array(
-        v.object({
-          speaker: v.optional(v.string()),
-          start: v.number(),
-          end: v.number(),
-          text: v.string(),
-        }),
-      ),
-    ),
+    segments: v.optional(v.array(segmentValidator)),
     durationSeconds: v.optional(v.number()),
     error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { jobId, ...patch } = args;
-    // TODO(impl): validate `status` against the allowed union before patching.
-    await ctx.db.patch(jobId, patch as Record<string, unknown>);
+    const patch: Partial<Doc<"jobs">> = { status: args.status };
+    if (args.progress !== undefined) patch.progress = args.progress;
+    if (args.transcript !== undefined) patch.transcript = args.transcript;
+    if (args.segments !== undefined) patch.segments = args.segments;
+    if (args.durationSeconds !== undefined) patch.durationSeconds = args.durationSeconds;
+    if (args.error !== undefined) patch.error = args.error;
+    await ctx.db.patch(args.jobId, patch);
   },
 });
