@@ -5,11 +5,7 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 
-interface UploaderProps {
-  onJobCreated: (jobId: Id<"jobs">) => void;
-}
-
-export function Uploader({ onJobCreated }: UploaderProps) {
+export function Uploader() {
   const [diarize, setDiarize] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,12 +28,11 @@ export function Uploader({ onJobCreated }: UploaderProps) {
       if (!res.ok) throw new Error(`Upload failed (${res.status})`);
       const { storageId } = (await res.json()) as { storageId: string };
 
-      const jobId = await createJob({
+      await createJob({
         storageId: storageId as Id<"_storage">,
         fileName: file.name,
         diarize,
       });
-      onJobCreated(jobId);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

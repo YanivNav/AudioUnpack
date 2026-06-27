@@ -32,18 +32,23 @@ export default function Page() {
     getAvailableModels().then(setAvailableModels);
   }, [getAvailableModels]);
 
-  // Sort: newest first (already returned desc by the query, but ensure it)
-  const sorted = useMemo(
-    () => (jobs ? [...jobs].sort((a, b) => b._creationTime - a._creationTime) : jobs),
-    [jobs],
-  );
+  // Sort newest first and partition into processing vs completed.
+  const { processing, completed } = useMemo(() => {
+    if (!jobs) return { processing: undefined, completed: undefined };
+    const sorted = [...jobs].sort((a, b) => b._creationTime - a._creationTime);
+    const inflight = new Set(["uploaded", "queued", "normalizing", "transcribing", "diarizing"]);
+    return {
+      processing: sorted.filter((j) => inflight.has(j.status)),
+      completed: sorted.filter((j) => !inflight.has(j.status)),
+    };
+  }, [jobs]);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
       {/* Header */}
       <header className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          audio‑unpack
+          Audio Unpack
         </h1>
         <p className="mt-1 text-sm text-slate-500">
           Transcribe audio of any format, then summarize the conversation.
@@ -51,19 +56,14 @@ export default function Page() {
       </header>
 
       {/* Uploader */}
-      <Uploader
-        onJobCreated={(jobId) => {
-          setModalState({ jobId, tab: "transcript" });
-        }}
-      />
+      <Uploader />
 
       {/* Job history */}
-      <section className="mt-6">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
-          Recent Jobs
-        </h2>
-
-        {sorted === undefined ? (
+      {processing === undefined ? (
+        <section className="mt-6">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">
+            Recent Jobs
+          </h2>
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <div
@@ -75,23 +75,55 @@ export default function Page() {
               </div>
             ))}
           </div>
-        ) : sorted.length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-400">
+        </section>
+      ) : processing.length === 0 && completed.length === 0 ? (
+        <section className="mt-6">
+          <p className="py-12 text-center text-sm text-slate-400">
             No jobs yet — upload a file to get started.
           </p>
-        ) : (
-          <div className="space-y-2">
-            {sorted.map((job) => (
-              <JobCard
-                key={job._id}
-                jobId={job._id}
-                onOpenModal={(tab) => setModalState({ jobId: job._id, tab })}
-                availableModels={availableModels}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+        </section>
+      ) : (
+        <>
+          {/* In-progress jobs */}
+          {processing.length > 0 && (
+            <section className="mt-6">
+              <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-600">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-500" />
+                Processing ({processing.length})
+              </h2>
+              <div className="space-y-2">
+                {processing.map((job) => (
+                  <JobCard
+                    key={job._id}
+                    jobId={job._id}
+                    onOpenModal={(tab) => setModalState({ jobId: job._id, tab })}
+                    availableModels={availableModels}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Completed jobs */}
+          {completed.length > 0 && (
+            <section className="mt-6">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Completed ({completed.length})
+              </h2>
+              <div className="space-y-2">
+                {completed.map((job) => (
+                  <JobCard
+                    key={job._id}
+                    jobId={job._id}
+                    onOpenModal={(tab) => setModalState({ jobId: job._id, tab })}
+                    availableModels={availableModels}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
 
       {/* Transcript modal */}
       {modalState && (
@@ -211,6 +243,7 @@ function TranscriptModal({
                   <div
                     key={i}
                     className="group rounded-md px-3 py-2 transition-colors hover:bg-slate-50"
+                    dir={isRTL(job.language) ? "rtl" : undefined}
                   >
                     <div className="mb-0.5 flex items-center gap-2">
                       {seg.speaker && (

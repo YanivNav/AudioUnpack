@@ -41,6 +41,7 @@ http.route({
       ...(body.result
         ? {
             transcript: body.result.text,
+            language: body.result.language,
             segments: body.result.segments,
             durationSeconds: body.result.durationSeconds,
           }
