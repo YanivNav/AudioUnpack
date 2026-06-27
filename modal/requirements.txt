@@ -1,8 +1,9 @@
 # Mirror of the deps installed into the Modal image (see modal/transcribe.py).
 # Listed here for local editor/type tooling; Modal builds from the Image definition,
 # not this file. ffmpeg is installed via apt in the image, not pip.
-faster-whisper==1.1.1
+faster-whisper==1.1.0
 whisperx==3.3.1   # opt-in diarization mode (word alignment + pyannote 3.1)
 httpx==0.28.1
 pydantic==2.11.0
 modal>=0.64
+requests>=2.32

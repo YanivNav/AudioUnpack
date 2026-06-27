@@ -12,10 +12,13 @@ ffmpeg or a GPU model. Modal gives on-demand GPU that scales to zero between job
 ## Flow
 
 ```
-Convex action  ──POST /transcribe (Bearer MODAL_AUTH_TOKEN)──►  Modal web endpoint
+Convex action  ──POST /transcribe (MODAL_AUTH_TOKEN in body)──►  Modal web endpoint
                                                                   └─ spawns Transcriber.run (GPU)
 Modal job  ──POST /modal/transcript (x-callback-secret)──►  Convex httpAction  ──►  jobs row (live UI)
 ```
+
+The endpoint authenticates with the token in the request body (not an `Authorization`
+header) so it needs no local fastapi at deploy-parse time.
 
 The request/response shapes mirror `@audio-unpack/core` (the TypeScript schemas are the
 source of truth): inbound ≈ `transcribeTaskPayloadSchema`, callback ≈ `transcriptCallbackSchema`.
