@@ -12,6 +12,7 @@
     "dev:convex": "convex dev",
     "dev:modal": "modal serve modal/transcribe.py",
     "deploy:modal": "modal deploy modal/transcribe.py",
+    "deploy:modal:dev": "modal deploy modal/transcribe.py -e dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck"
   },

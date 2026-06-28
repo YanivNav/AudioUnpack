@@ -16,8 +16,16 @@ interface ModelDef {
 
 export const SUMMARIZE_MODELS = [
   {
+    id: "deepseek",
+    label: "DeepSeek",
+    provider: "openai",
+    modelId: "deepseek-chat",
+    envKey: "DEEPSEEK_API_KEY",
+    baseURL: "https://api.deepseek.com/v1",
+  },
+  {
     id: "groq",
-    label: "Groq (free)",
+    label: "Groq",
     provider: "groq",
     modelId: "llama-3.3-70b-versatile",
     envKey: "GROQ_API_KEY",
@@ -28,14 +36,6 @@ export const SUMMARIZE_MODELS = [
     provider: "anthropic",
     modelId: "claude-sonnet-4-6",
     envKey: "ANTHROPIC_API_KEY",
-  },
-  {
-    id: "deepseek",
-    label: "DeepSeek",
-    provider: "openai",
-    modelId: "deepseek-chat",
-    envKey: "DEEPSEEK_API_KEY",
-    baseURL: "https://api.deepseek.com/v1",
   },
   {
     id: "openai",

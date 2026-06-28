@@ -155,7 +155,7 @@ function TranscriptModal({
   const renameJob = useMutation(api.jobs.rename);
   const [summarizing, setSummarizing] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
-  const [summaryModel, setSummaryModel] = useState<SummaryModel>("groq");
+  const [summaryModel, setSummaryModel] = useState<SummaryModel>("deepseek");
   const [tab, setTab] = useState<"transcript" | "summary">(initialTab);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -339,9 +339,10 @@ function TranscriptModal({
           >
             {SUMMARIZE_MODELS.map((m) => {
               const has = availableModels?.[m.id] ?? false;
+              const applicable = m.id !== 'groq' || job.segments!.length < 200;
               return (
-                <option key={m.id} value={m.id} disabled={!has}>
-                  {m.label}{!has ? " — no key" : ""}
+                <option key={m.id} value={m.id} disabled={!has || !applicable}>
+                  {m.label}{!has ? " — no key" : !applicable ? " - too large" : ""}
                 </option>
               );
             })}
